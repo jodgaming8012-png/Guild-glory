@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#111318">
+  <title>Guild Glory Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0d11; --panel: #151922; --panel-2: #1b202b; --line: #2a303d;
+      --text: #f7f7f4; --muted: #99a1b0; --orange: #ff7b22; --gold: #ffc247;
+      --green: #42d392; --red: #ff6574; --blue: #6f9cff; --shadow: 0 18px 50px rgba(0,0,0,.24);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-width: 320px; color: var(--text); background: radial-gradient(circle at 88% -10%, rgba(255,123,34,.15), transparent 30%), var(--bg); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, select { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    .app { max-width: 1440px; margin: auto; padding: 18px; }
+    .topbar { display: flex; gap: 16px; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 14px; background: linear-gradient(135deg, var(--orange), var(--gold)); color: #21150a; font-size: 24px; box-shadow: 0 10px 28px rgba(255,123,34,.25); }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: clamp(1.25rem, 4vw, 1.85rem); letter-spacing: -.04em; }
+    h2 { font-size: 1.05rem; letter-spacing: -.02em; }
+    .eyebrow { color: var(--gold); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .toolbar, .button-row { display: flex; flex-wrap: wrap; gap: 9px; }
+    .btn { padding: 10px 14px; border-radius: 10px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); transition: .2s ease; font-weight: 700; font-size: .86rem; }
+    .btn:hover { transform: translateY(-1px); border-color: #596274; }
+    .btn-primary { color: #241308; background: linear-gradient(135deg, var(--orange), var(--gold)); border: 0; }
+    .btn-danger { color: #ffc0c7; background: rgba(255,101,116,.1); border-color: rgba(255,101,116,.35); }
+    .btn-ghost { background: transparent; }
+    .grid { display: grid; gap: 16px; }
+    .stats { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }
+    .main-grid { grid-template-columns: minmax(0, 1.4fr) minmax(290px, .8fr); align-items: start; }
+    .card { background: linear-gradient(145deg, rgba(25,29,39,.96), rgba(16,19,26,.96)); border: 1px solid rgba(255,255,255,.07); border-radius: 17px; padding: 17px; box-shadow: var(--shadow); }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .card-title { display: flex; align-items: center; gap: 9px; }
+    .card-title span { color: var(--orange); }
+    .stat { min-height: 112px; position: relative; overflow: hidden; }
+    .stat::after { content: ""; position: absolute; width: 90px; height: 90px; right: -34px; bottom: -42px; border-radius: 50%; background: rgba(255,194,71,.1); }
+    .stat-value { margin-top: 10px; font-size: clamp(1.35rem, 5vw, 2rem); font-weight: 850; letter-spacing: -.06em; }
+    .stat-label { color: var(--muted); font-size: .75rem; }
+    .stat.accent .stat-value { color: var(--gold); }
+    .stat.good .stat-value { color: var(--green); }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; color: var(--muted); font-size: .73rem; font-weight: 750; margin-bottom: 6px; }
+    input, select { width: 100%; color: var(--text); background: #10131a; border: 1px solid var(--line); outline: none; border-radius: 9px; padding: 10px 11px; }
+    input:focus, select:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(255,123,34,.11); }
+    .field { margin-bottom: 12px; }
+    .muted { color: var(--muted); }
+    .small { font-size: .78rem; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 5px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 620px; }
+    th { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    td { padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,.06); font-size: .85rem; }
+    tr:last-child td { border-bottom: 0; }
+    .member-name { font-weight: 750; }
+    .uid { color: var(--muted); font-size: .73rem; margin-top: 2px; }
+    .pill { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 999px; font-size: .7rem; font-weight: 800; background: rgba(111,156,255,.13); color: #a9c2ff; }
+    .pill.leader { color: #ffd87e; background: rgba(255,194,71,.13); }
+    .pill.officer { color: #ffac7d; background: rgba(255,123,34,.13); }
+    .inactive { color: #ff9da7; background: rgba(255,101,116,.12); padding: 4px 7px; border-radius: 6px; font-size: .68rem; font-weight: 800; white-space: nowrap; }
+    .row-actions { display: flex; gap: 5px; }
+    .icon-btn { width: 31px; height: 31px; border-radius: 8px; color: var(--muted); background: #202532; }
+    .icon-btn:hover { color: var(--text); background: #2a3242; }
+    .leaderboard { display: grid; gap: 8px; }
+    .rank-row { display: flex; align-items: center; gap: 11px; padding: 10px; background: rgba(255,255,255,.035); border-radius: 11px; animation: rise .3s both; }
+    .rank { width: 28px; text-align: center; font-weight: 900; }
+    .rank.top-1 { color: #ffd15d; font-size: 1.25rem; }.rank.top-2 { color: #cbd4df; font-size: 1.15rem; }.rank.top-3 { color: #d48d63; font-size: 1.1rem; }
+    .rank-info { flex: 1; min-width: 0; }.rank-info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.rank-info small { color: var(--muted); }
+    .points { color: var(--gold); font-weight: 850; white-space: nowrap; }
+    .tabs { display: flex; gap: 4px; padding: 4px; background: #10131a; border: 1px solid var(--line); border-radius: 10px; }
+    .tab { flex: 1; padding: 8px 9px; color: var(--muted); background: transparent; border-radius: 7px; font-size: .72rem; font-weight: 800; }.tab.active { color: #21150a; background: var(--gold); }
+    .chart-box { height: 245px; }.chart-box canvas { max-width: 100%; }
+    .empty { padding: 26px 10px; text-align: center; color: var(--muted); }
+    .footer { padding: 28px 4px 12px; text-align: center; color: #687080; font-size: .74rem; }
+    .toast { position: fixed; right: 18px; bottom: 18px; z-index: 5; padding: 12px 15px; border: 1px solid rgba(255,194,71,.35); background: #24200f; color: #ffe1a1; border-radius: 10px; box-shadow: var(--shadow); transform: translateY(20px); opacity: 0; pointer-events: none; transition: .25s; }.toast.show { transform: translateY(0); opacity: 1; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 4; display: none; place-items: center; padding: 16px; background: rgba(0,0,0,.7); }.modal-backdrop.open { display: grid; }.modal { width: min(100%, 480px); max-height: 90vh; overflow: auto; }
+    @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+    @media (min-width: 680px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 880px) { .main-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 560px) { .app { padding: 12px; }.topbar { align-items: flex-start; flex-direction: column; }.topbar .toolbar { width: 100%; }.topbar .btn { flex: 1; }.two-col { grid-template-columns: 1fr; gap: 0; }.card { padding: 14px; }.card-header { flex-direction: column; }.card-header .toolbar, .card-header .tabs { width: 100%; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark">⚔</div><div><div class="eyebrow">Free Fire guild tool</div><h1>Guild Glory Tracker</h1></div></div>
+      <div class="toolbar"><button class="btn" id="exportBtn">↓ Export JSON</button><button class="btn" id="importBtn">↑ Import JSON</button><input id="fileInput" type="file" accept="application/json" hidden></div>
+    </header>
+
+    <section class="grid stats" aria-label="Guild summary">
+      <div class="card stat accent"><div class="stat-label">Total guild glory</div><div class="stat-value" id="totalGlory">0</div><div class="small muted">All logged points</div></div>
+      <div class="card stat good"><div class="stat-label">Today's glory</div><div class="stat-value" id="todayGlory">0</div><div class="small muted" id="todayDate"></div></div>
+      <div class="card stat"><div class="stat-label">Most active member</div><div class="stat-value" id="activeMember">—</div><div class="small muted" id="activeMemberPoints">Keep logging glory</div></div>
+      <div class="card stat"><div class="stat-label">Guild members</div><div class="stat-value" id="memberCount">0</div><div class="small muted" id="inactiveCount">No inactive alerts</div></div>
+    </section>
+
+    <section class="grid main-grid">
+      <div class="grid">
+        <article class="card">
+          <div class="card-header"><div><div class="eyebrow">Guild identity</div><h2>Setup your guild</h2></div><span class="muted">Saved automatically</span></div>
+          <div class="two-col"><div class="field"><label for="guildName">Guild name</label><input id="guildName" placeholder="e.g. Phoenix Force"></div><div class="field"><label for="guildId">Guild ID</label><input id="guildId" placeholder="e.g. 123456789"></div></div>
+          <div class="field"><label for="leaderName">Leader name</label><input id="leaderName" placeholder="e.g. ShadowKing"></div>
+          <div class="form-actions"><button class="btn btn-primary" id="saveGuildBtn">Save guild profile</button></div>
+        </article>
+
+        <article class="card">
+          <div class="card-header"><div><div class="eyebrow">Roster</div><h2>Member management</h2></div><button class="btn btn-primary" id="addMemberBtn">＋ Add member</button></div>
+          <div class="toolbar" style="margin-bottom:12px"><input id="memberSearch" placeholder="Search by name or UID…" style="flex:1;min-width:180px"><select id="sortMembers" style="width:auto"><option value="name">Sort: Name</option><option value="glory">Sort: Total glory</option><option value="recent">Sort: Recently added</option></select></div>
+          <div class="table-wrap"><table><thead><tr><th>Member</th><th>Role</th><th>Total glory</th><th>Last 3 days</th><th>Actions</th></tr></thead><tbody id="memberRows"></tbody></table></div>
+        </article>
+
+        <article class="card">
+          <div class="card-header"><div><div class="eyebrow">Daily input</div><h2>Log today's glory</h2></div><span class="muted small" id="logDateLabel"></span></div>
+          <div class="toolbar" style="margin-bottom:12px"><select id="logMember" style="flex:1;min-width:180px"><option value="">Choose a member…</option></select><input id="gloryAmount" type="number" min="0" step="1" placeholder="Glory points" style="max-width:170px"><button class="btn btn-primary" id="logGloryBtn">＋ Log glory</button></div>
+          <div class="small muted">You can log multiple entries for the same member today; totals are combined.</div>
+        </article>
+
+        <article class="card"><div class="card-header"><div><div class="eyebrow">Activity trend</div><h2>Glory over the last 30 days</h2></div></div><div class="chart-box"><canvas id="gloryChart"></canvas></div></article>
+      </div>
+
+      <aside class="grid">
+        <article class="card"><div class="card-header"><div><div class="eyebrow">Competitive view</div><h2>Leaderboard</h2></div><button class="btn btn-ghost" id="shareBtn">↗ Share</button></div><div class="tabs" id="leaderboardTabs"><button class="tab active" data-range="today">Today</button><button class="tab" data-range="week">This week</button><button class="tab" data-range="all">All time</button></div><div class="leaderboard" id="leaderboard" style="margin-top:12px"></div></article>
+        <article class="card"><div class="card-header"><div><div class="eyebrow">Needs attention</div><h2>Inactive alerts</h2></div><span class="inactive" id="alertBadge">0 alerts</span></div><div id="inactiveList"></div></article>
+      </aside>
+    </section>
+    <footer class="footer">Fan-made tool, not affiliated with Garena.</footer>
+  </main>
+
+  <div class="modal-backdrop" id="memberModal"><div class="card modal"><div class="card-header"><div><div class="eyebrow">Roster editor</div><h2 id="modalTitle">Add member</h2></div><button class="icon-btn" id="closeModal">×</button></div><form id="memberForm"><input id="editMemberId" type="hidden"><div class="field"><label for="memberName">Member name</label><input id="memberName" required placeholder="In-game name"></div><div class="field"><label for="memberUid">In-game UID</label><input id="memberUid" required placeholder="Player UID"></div><div class="field"><label for="memberRole">Role</label><select id="memberRole"><option>Member</option><option>Officer</option><option>Leader</option></select></div><div class="form-actions"><button type="button" class="btn" id="cancelModal">Cancel</button><button class="btn btn-primary" type="submit">Save member</button></div></form></div></div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Guild Glory Tracker: all application state is kept locally in the browser.
+    const STORAGE_KEY = 'guild-glory-tracker-v1';
+    const todayISO = () => new Date().toISOString().slice(0, 10);
+    const dateFromOffset = offset => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0,10); };
+    const prettyDate = iso => new Date(iso + 'T12:00:00').toLocaleDateString(undefined, {month:'short', day:'numeric'});
+    let state = loadState();
+    let leaderboardRange = 'today';
+    let chart;
+
+    function loadState() {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || { guild: {}, members: [], logs: [] }; }
+      catch { return { guild: {}, members: [], logs: [] }; }
+    }
+    function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function uid() { return crypto.randomUUID ? crypto.randomUUID() : Date.now() + Math.random().toString(16).slice(2); }
+    function memberById(id) { return state.members.find(m => m.id === id); }
+    function pointsFor(memberId, fromDate) { return state.logs.filter(l => l.memberId === memberId && (!fromDate || l.date >= fromDate)).reduce((sum,l) => sum + Number(l.points || 0), 0); }
+    function daysWithoutGlory(memberId) { return [0,-1,-2].filter(offset => !state.logs.some(l => l.memberId === memberId && l.date === dateFromOffset(offset) && Number(l.points) > 0)).length; }
+    function totalForLogs(fromDate) { return state.logs.filter(l => !fromDate || l.date >= fromDate).reduce((sum,l) => sum + Number(l.points || 0), 0); }
+    function showToast(message) { const el = document.getElementById('toast'); el.textContent = message; el.classList.add('show'); clearTimeout(showToast.timer); showToast.timer = setTimeout(() => el.classList.remove('show'), 2600); }
+
+    function render() {
+      const today = todayISO();
+      document.getElementById('guildName').value = state.guild.name || '';
+      document.getElementById('guildId').value = state.guild.id || '';
+      document.getElementById('leaderName').value = state.guild.leader || '';
+      document.getElementById('todayDate').textContent = prettyDate(today);
+      document.getElementById('logDateLabel').textContent = prettyDate(today);
+      document.getElementById('totalGlory').textContent = totalForLogs().toLocaleString();
+      document.getElementById('todayGlory').textContent = totalForLogs(today).toLocaleString();
+      document.getElementById('memberCount').textContent = state.members.length;
+      const rankedAll = [...state.members].map(m => ({m, points: pointsFor(m.id)})).sort((a,b) => b.points - a.points);
+      const active = rankedAll.find(x => x.points > 0);
+      document.getElementById('activeMember').textContent = active ? active.m.name : '—';
+      document.getElementById('activeMemberPoints').textContent = active ? `${active.points.toLocaleString()} total points` : 'Keep logging glory';
+      const inactive = state.members.filter(m => daysWithoutGlory(m.id) >= 3);
+      document.getElementById('inactiveCount').textContent = inactive.length ? `${inactive.length} inactive alert${inactive.length === 1 ? '' : 's'}` : 'No inactive alerts';
+      renderMembers(); renderLogSelect(); renderLeaderboard(); renderInactive(); renderChart();
+    }
+
+    function renderMembers() {
+      const query = document.getElementById('memberSearch').value.toLowerCase().trim();
+      const sort = document.getElementById('sortMembers').value;
+      let members = state.members.filter(m => `${m.name} ${m.uid}`.toLowerCase().includes(query));
+      members.sort((a,b) => sort === 'glory' ? pointsFor(b.id)-pointsFor(a.id) : sort === 'recent' ? (b.createdAt||0)-(a.createdAt||0) : a.name.localeCompare(b.name));
+      const tbody = document.getElementById('memberRows');
+      if (!members.length) { tbody.innerHTML = `<tr><td colspan="5" class="empty">${state.members.length ? 'No members match your search.' : 'No members yet. Add your first guild warrior.'}</td></tr>`; return; }
+      tbody.innerHTML = members.map(m => { const inactive = daysWithoutGlory(m.id) >= 3; return `<tr><td><div class="member-name">${escapeHTML(m.name)}</div><div class="uid">UID: ${escapeHTML(m.uid)}</div></td><td><span class="pill ${m.role.toLowerCase()}">${m.role}</span></td><td><strong>${pointsFor(m.id).toLocaleString()}</strong></td><td>${inactive ? '<span class="inactive">0 glory · 3d+</span>' : '<span class="muted small">Active</span>'}</td><td><div class="row-actions"><button class="icon-btn" title="Edit member" onclick="openMemberModal('${m.id}')">✎</button><button class="icon-btn" title="Remove member" onclick="removeMember('${m.id}')">×</button></div></td></tr>`; }).join('');
+    }
+    function renderLogSelect() { const select = document.getElementById('logMember'); const current = select.value; select.innerHTML = '<option value="">Choose a member…</option>' + [...state.members].sort((a,b) => a.name.localeCompare(b.name)).map(m => `<option value="${m.id}">${escapeHTML(m.name)} · ${m.role}</option>`).join(''); if (memberById(current)) select.value = current; }
+    function renderLeaderboard() {
+      const start = leaderboardRange === 'today' ? todayISO() : leaderboardRange === 'week' ? dateFromOffset(-6) : null;
+      const data = state.members.map(m => ({m, points: pointsFor(m.id, start)})).sort((a,b) => b.points-a.points || a.m.name.localeCompare(b.m.name));
+      const box = document.getElementById('leaderboard');
+      if (!data.length) { box.innerHTML = '<div class="empty">Add members to build your leaderboard.</div>'; return; }
+      box.innerHTML = data.map((x,i) => `<div class="rank-row" style="animation-delay:${i*35}ms"><div class="rank ${i < 3 ? 'top-'+(i+1) : ''}">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div><div class="rank-info"><strong>${escapeHTML(x.m.name)}</strong><small>${x.m.role}</small></div><div class="points">${x.points.toLocaleString()} pts</div></div>`).join('');
+    }
+    function renderInactive() { const inactive = state.members.filter(m => daysWithoutGlory(m.id) >= 3); document.getElementById('alertBadge').textContent = `${inactive.length} alert${inactive.length===1?'':'s'}`; document.getElementById('inactiveList').innerHTML = inactive.length ? inactive.map(m => `<div class="rank-row"><div class="rank">!</div><div class="rank-info"><strong>${escapeHTML(m.name)}</strong><small>No glory logged in the last 3 days</small></div></div>`).join('') : '<div class="empty">All members have logged glory in the last 3 days.</div>'; }
+    function renderChart() { const labels = [], values = []; for(let i=-29;i<=0;i++){ const date=dateFromOffset(i); labels.push(prettyDate(date)); values.push(totalForLogs(date) - totalForLogs(dateFromOffset(i-1))); } const ctx=document.getElementById('gloryChart'); if(chart) chart.destroy(); chart=new Chart(ctx,{type:'line',data:{labels,datasets:[{data:values,borderColor:'#ff9a45',backgroundColor:'rgba(255,123,34,.14)',fill:true,tension:.35,pointRadius:2,pointBackgroundColor:'#ffc247'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.raw.toLocaleString()} glory`}}},scales:{x:{ticks:{color:'#778090',maxTicksLimit:7},grid:{display:false}},y:{beginAtZero:true,ticks:{color:'#778090'},grid:{color:'rgba(255,255,255,.07)'}}}}}); }
+    function escapeHTML(value) { return String(value).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+
+    function openMemberModal(id='') { document.getElementById('editMemberId').value=id; document.getElementById('modalTitle').textContent=id?'Edit member':'Add member'; const m=memberById(id); document.getElementById('memberName').value=m?.name||''; document.getElementById('memberUid').value=m?.uid||''; document.getElementById('memberRole').value=m?.role||'Member'; document.getElementById('memberModal').classList.add('open'); setTimeout(()=>document.getElementById('memberName').focus(),50); }
+    function closeModal() { document.getElementById('memberModal').classList.remove('open'); }
+    function removeMember(id) { const m=memberById(id); if(!m || !confirm(`Remove ${m.name} and all of their glory logs?`)) return; state.members=state.members.filter(x=>x.id!==id); state.logs=state.logs.filter(l=>l.memberId!==id); persist(); render(); showToast('Member removed'); }
+    window.openMemberModal=openMemberModal; window.removeMember=removeMember;
+
+    document.getElementById('saveGuildBtn').addEventListener('click',()=>{state.guild={name:document.getElementById('guildName').value.trim(),id:document.getElementById('guildId').value.trim(),leader:document.getElementById('leaderName').value.trim()};persist();showToast('Guild profile saved');});
+    document.getElementById('addMemberBtn').addEventListener('click',()=>openMemberModal());
+    document.getElementById('closeModal').addEventListener('click',closeModal); document.getElementById('cancelModal').addEventListener('click',closeModal); document.getElementById('memberModal').addEventListener('click',e=>{if(e.target.id==='memberModal')closeModal();});
+    document.getElementById('memberForm').addEventListener('submit',e=>{e.preventDefault();const id=document.getElementById('editMemberId').value;const payload={name:document.getElementById('memberName').value.trim(),uid:document.getElementById('memberUid').value.trim(),role:document.getElementById('memberRole').value};if(!payload.name||!payload.uid)return;if(id){Object.assign(memberById(id),payload);showToast('Member updated');}else{state.members.push({id:uid(),...payload,createdAt:Date.now()});showToast('Member added');}persist();closeModal();render();});
+    document.getElementById('logGloryBtn').addEventListener('click',()=>{const memberId=document.getElementById('logMember').value;const points=Number(document.getElementById('gloryAmount').value);if(!memberId||!Number.isFinite(points)||points<0){showToast('Choose a member and enter valid points');return;}state.logs.push({id:uid(),memberId,date:todayISO(),points:Math.floor(points)});persist();document.getElementById('gloryAmount').value='';render();showToast('Glory logged successfully');});
+    document.getElementById('memberSearch').addEventListener('input',renderMembers); document.getElementById('sortMembers').addEventListener('change',renderMembers);
+    document.getElementById('leaderboardTabs').addEventListener('click',e=>{if(!e.target.matches('.tab'))return;leaderboardRange=e.target.dataset.range;document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t===e.target));renderLeaderboard();});
+    document.getElementById('shareBtn').addEventListener('click',async()=>{const start=leaderboardRange==='today'?todayISO():leaderboardRange==='week'?dateFromOffset(-6):null;const title=state.guild.name||'Our Guild';const rows=state.members.map(m=>({name:m.name,points:pointsFor(m.id,start)})).sort((a,b)=>b.points-a.points).slice(0,10);const text=`⚔️ ${title} — Guild Glory Leaderboard\n${leaderboardRange==='today'?'Today':leaderboardRange==='week'?'This Week':'All Time'}\n\n`+rows.map((x,i)=>`${i+1}. ${x.name} — ${x.points.toLocaleString()} glory`).join('\n')+`\n\nTracked with Guild Glory Tracker`;try{await navigator.clipboard.writeText(text);showToast('Leaderboard copied for WhatsApp');}catch{showToast('Copy failed — please try again');}});
+    document.getElementById('exportBtn').addEventListener('click',()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`guild-glory-backup-${todayISO()}.json`;a.click();URL.revokeObjectURL(a.href);showToast('Backup exported');});
+    document.getElementById('importBtn').addEventListener('click',()=>document.getElementById('fileInput').click());
+    document.getElementById('fileInput').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{try{const incoming=JSON.parse(reader.result);if(!incoming||!Array.isArray(incoming.members)||!Array.isArray(incoming.logs))throw Error();state={guild:incoming.guild||{},members:incoming.members,logs:incoming.logs};persist();render();showToast('Backup imported');}catch{showToast('Invalid Guild Glory JSON backup');}e.target.value='';};reader.readAsText(file);});
+    render();
+  </script>
+</body>
+</html>
